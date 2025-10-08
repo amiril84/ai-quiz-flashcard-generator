@@ -15,6 +15,30 @@ app = Flask(__name__)
 # In production, replace '*' with your actual frontend domain
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
+# Load API keys from environment variables
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL_NAME = os.environ.get('OPENROUTER_MODEL_NAME', 'google/gemini-2.0-flash-exp:free')
+FIRECRAWL_API_KEY = os.environ.get('FIRECRAWL_API_KEY', '')
+SUPADATA_API_KEY = os.environ.get('SUPADATA_API_KEY', '')
+PERPLEXITY_API_KEY = os.environ.get('PERPLEXITY_API_KEY', '')
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """
+    Return API configuration to frontend
+    """
+    if not OPENROUTER_API_KEY:
+        return jsonify({
+            'success': False,
+            'error': 'OpenRouter API key not configured. Please set OPENROUTER_API_KEY environment variable on Render.'
+        }), 500
+    
+    return jsonify({
+        'success': True,
+        'openrouter_api_key': OPENROUTER_API_KEY,
+        'model_name': OPENROUTER_MODEL_NAME
+    })
+
 def extract_video_id(url):
     """
     Extract video ID from various YouTube URL formats
@@ -111,7 +135,8 @@ def get_transcript():
         data = request.get_json()
         video_url = data.get('video_url', '')
         languages = data.get('languages', ['en'])
-        supadata_api_key = data.get('supadata_api_key', '')
+        # Use environment variable for Supadata API key
+        supadata_api_key = SUPADATA_API_KEY
         
         if not video_url:
             return jsonify({'error': 'Video URL is required'}), 400
@@ -248,13 +273,18 @@ def scrape_website():
     try:
         data = request.get_json()
         website_url = data.get('website_url', '')
-        firecrawl_api_key = data.get('firecrawl_api_key', '')
         
         if not website_url:
             return jsonify({'error': 'Website URL is required'}), 400
         
+        # Use environment variable for Firecrawl API key
+        firecrawl_api_key = FIRECRAWL_API_KEY
+        
         if not firecrawl_api_key:
-            return jsonify({'error': 'Firecrawl API key is required'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Firecrawl API key not configured. Please set FIRECRAWL_API_KEY environment variable on Render.'
+            }), 500
         
         # Initialize Firecrawl with the provided API key
         app_firecrawl = FirecrawlApp(api_key=firecrawl_api_key)

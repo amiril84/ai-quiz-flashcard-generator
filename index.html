@@ -13,32 +13,8 @@
             <p class="subtitle">Generate interactive quizzes and flashcards from your documents using AI</p>
         </header>
 
-        <!-- API Configuration Section -->
-        <div class="config-section" id="configSection">
-            <h2>⚙️ API Configuration</h2>
-            <div class="form-group">
-                <label for="apiKey">OpenRouter API Key:</label>
-                <input type="password" id="apiKey" placeholder="Enter your OpenRouter API key" />
-            </div>
-            <div class="form-group">
-                <label for="modelName">Model Name:</label>
-                <input type="text" id="modelName" value="google/gemini-2.0-flash-exp:free" placeholder="e.g., google/gemini-2.0-flash-exp:free" />
-            </div>
-            <div class="form-group">
-                <label for="firecrawlApiKey">Firecrawl API Key (for website scraping):</label>
-                <input type="password" id="firecrawlApiKey" placeholder="Enter your Firecrawl API key (optional)" />
-                <small style="color: #666;">Get your free API key at <a href="https://firecrawl.dev" target="_blank">firecrawl.dev</a></small>
-            </div>
-            <div class="form-group">
-                <label for="supadataApiKey">Supadata API Key (for YouTube transcripts):</label>
-                <input type="password" id="supadataApiKey" placeholder="Enter your Supadata API key (optional)" />
-                <small style="color: #666;">Get 100 free requests/month at <a href="https://supadata.ai" target="_blank">supadata.ai</a> - More reliable than Tor proxy</small>
-            </div>
-            <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
-        </div>
-
         <!-- Quiz Setup Section -->
-        <div class="setup-section" id="setupSection" style="display: none;">
+        <div class="setup-section" id="setupSection">
             <h2>📄 Create Your Learning Content</h2>
             
             <div class="form-group">

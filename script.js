@@ -1,8 +1,6 @@
 // Global variables
 let apiKey = '';
 let modelName = '';
-let firecrawlApiKey = '';
-let supadataApiKey = '';
 let quizData = [];
 let currentQuestionIndex = 0;
 let userAnswers = [];
@@ -18,36 +16,40 @@ const BACKEND_URL = window.location.hostname === 'localhost' || window.location.
     ? 'http://localhost:5000'
     : 'https://ai-quiz-backend-qbm7.onrender.com'; // Replace with your actual Render backend URL
 
-// Save API configuration
-function saveConfig() {
-    apiKey = document.getElementById('apiKey').value.trim();
-    modelName = document.getElementById('modelName').value.trim();
-    firecrawlApiKey = document.getElementById('firecrawlApiKey').value.trim();
-    supadataApiKey = document.getElementById('supadataApiKey').value.trim();
-    
-    if (!apiKey) {
-        alert('Please enter your OpenRouter API key');
-        return;
+// Fetch API configuration from backend
+async function fetchConfig() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/config`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert('Configuration Error: ' + data.error + '\n\nPlease ensure all environment variables are set on Render.');
+            return false;
+        }
+        
+        apiKey = data.openrouter_api_key;
+        modelName = data.model_name;
+        return true;
+        
+    } catch (error) {
+        alert('Failed to load configuration from backend. Please ensure the backend server is running and environment variables are set on Render.\n\nError: ' + error.message);
+        console.error('Configuration error:', error);
+        return false;
     }
-    
-    if (!modelName) {
-        alert('Please enter a model name');
-        return;
-    }
-    
-    // Firecrawl and Supadata API keys are optional
-    // Firecrawl is only needed for website scraping
-    // Supadata is only needed for YouTube transcripts (falls back to Tor proxy if not provided)
-    
-    // Hide config section and show setup section
-    document.getElementById('configSection').style.display = 'none';
-    document.getElementById('setupSection').style.display = 'block';
-    
-    alert('Configuration saved successfully! You can now create your quiz.');
 }
 
-// Handle file upload
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize app on page load
+document.addEventListener('DOMContentLoaded', async function() {
+    // Fetch configuration from backend
+    const configLoaded = await fetchConfig();
+    
+    if (!configLoaded) {
+        // Disable the generate button if config failed to load
+        document.getElementById('generateBtn').disabled = true;
+        document.getElementById('generateBtn').innerHTML = '⚠️ Configuration Error';
+    }
+    
+    // Set up file upload handler
     const fileInput = document.getElementById('documentUpload');
     if (fileInput) {
         fileInput.addEventListener('change', handleFileUpload);
@@ -115,13 +117,7 @@ async function fetchYouTubeTranscript() {
     
     try {
         youtubeInfo.style.display = 'block';
-        
-        // Show appropriate loading message based on whether Supadata API key is provided
-        if (supadataApiKey) {
-            youtubeInfo.textContent = '⏳ Fetching YouTube transcript via Supadata.ai...';
-        } else {
-            youtubeInfo.textContent = '⏳ Fetching YouTube transcript via Tor proxy (may be slower)...';
-        }
+        youtubeInfo.textContent = '⏳ Fetching YouTube transcript...';
         
         const languageCode = language === 'english' ? 'en' : 'id';
         
@@ -129,11 +125,6 @@ async function fetchYouTubeTranscript() {
             video_url: youtubeUrl,
             languages: [languageCode, 'en']
         };
-        
-        // Add Supadata API key if provided
-        if (supadataApiKey) {
-            requestBody.supadata_api_key = supadataApiKey;
-        }
         
         const response = await fetch(`${BACKEND_URL}/api/transcript`, {
             method: 'POST',
@@ -178,11 +169,6 @@ async function fetchWebsiteContent() {
         return false;
     }
     
-    if (!firecrawlApiKey) {
-        alert('Please enter your Firecrawl API key in the configuration section first');
-        return false;
-    }
-    
     try {
         websiteInfo.style.display = 'block';
         websiteInfo.textContent = '⏳ Scraping website content...';
@@ -193,8 +179,7 @@ async function fetchWebsiteContent() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                website_url: websiteUrl,
-                firecrawl_api_key: firecrawlApiKey
+                website_url: websiteUrl
             })
         });
         
@@ -213,7 +198,7 @@ async function fetchWebsiteContent() {
         return true;
         
     } catch (error) {
-        websiteInfo.textContent = `❌ Error: ${error.message}. Make sure the backend server is running and you have entered a valid Firecrawl API key.`;
+        websiteInfo.textContent = `❌ Error: ${error.message}. Make sure the backend server is running and Firecrawl API key is configured on Render.`;
         websiteInfo.style.background = '#ffebee';
         websiteInfo.style.color = '#c62828';
         console.error('Error fetching website content:', error);
