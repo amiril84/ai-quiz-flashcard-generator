@@ -15,7 +15,7 @@ let isCardFlipped = false;
 // For production: Set this to your Render backend URL (e.g., https://your-app-name.onrender.com)
 const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:5000'
-    : 'https://your-backend-name.onrender.com'; // Replace with your actual Render backend URL
+    : 'https://ai-quiz-backend-vtnc.onrender.com'; // Replace with your actual Render backend URL
 
 // Save API configuration
 function saveConfig() {
