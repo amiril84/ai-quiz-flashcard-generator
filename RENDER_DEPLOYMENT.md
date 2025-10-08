@@ -25,6 +25,19 @@ This app uses a **two-service deployment**:
 1. **Backend** - Python Flask API (Web Service)
 2. **Frontend** - Static HTML/CSS/JS (Static Site)
 
+### 📦 Monorepo Structure
+
+Your repository is organized as a **monorepo** with both frontend and backend in the same GitHub repository:
+- **Frontend files** (index.html, script.js, styles.css) are at the **root level**
+- **Backend files** are in the `/backend` subdirectory
+
+Render fully supports monorepo deployments using the **Root Directory** setting:
+- For **Backend**: Set root directory to `backend` - Render treats this as the app root
+- For **Frontend**: Set root directory to `.` (root) - Frontend files are already at repository root
+- **Smart Deploys**: Backend deploys only trigger when `/backend` files change, frontend deploys only trigger when root-level files change
+
+This setup prevents unnecessary rebuilds and saves resources.
+
 ## 📝 Step-by-Step Deployment
 
 ### Step 1: Push Code to GitHub
@@ -47,17 +60,17 @@ This app uses a **two-service deployment**:
    - **Name**: `ai-quiz-backend` (or your preferred name)
    - **Region**: Choose closest to your users (e.g., Oregon)
    - **Branch**: `main` (or your default branch)
-   - **Root Directory**: Leave blank
+   - **Root Directory**: `backend` ⚠️ **IMPORTANT: Set this to `backend` for monorepo deployment**
    - **Runtime**: `Python 3`
 
    **Build & Deploy Settings:**
    - **Build Command**: 
      ```
-     pip install -r backend/requirements.txt
+     pip install -r requirements.txt
      ```
    - **Start Command**: 
      ```
-     gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app
+     gunicorn --bind 0.0.0.0:$PORT app:app
      ```
 
    **Advanced Settings (Click "Advanced"):**
@@ -99,10 +112,10 @@ This app uses a **two-service deployment**:
    **Basic Settings:**
    - **Name**: `ai-quiz-frontend` (or your preferred name)
    - **Branch**: `main`
-   - **Root Directory**: Leave blank
+   - **Root Directory**: `.` (or leave blank - frontend files are at repository root)
 
    **Build Settings:**
-   - **Build Command**: (leave blank or use `echo "No build needed"`)
+   - **Build Command**: `echo "No build needed"`
    - **Publish Directory**: `.` (current directory)
 
 4. Click **"Create Static Site"**
