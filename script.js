@@ -2,6 +2,7 @@
 let apiKey = '';
 let modelName = '';
 let firecrawlApiKey = '';
+let supadataApiKey = '';
 let quizData = [];
 let currentQuestionIndex = 0;
 let userAnswers = [];
@@ -22,6 +23,7 @@ function saveConfig() {
     apiKey = document.getElementById('apiKey').value.trim();
     modelName = document.getElementById('modelName').value.trim();
     firecrawlApiKey = document.getElementById('firecrawlApiKey').value.trim();
+    supadataApiKey = document.getElementById('supadataApiKey').value.trim();
     
     if (!apiKey) {
         alert('Please enter your OpenRouter API key');
@@ -33,7 +35,9 @@ function saveConfig() {
         return;
     }
     
-    // Firecrawl API key is optional, only needed for website scraping
+    // Firecrawl and Supadata API keys are optional
+    // Firecrawl is only needed for website scraping
+    // Supadata is only needed for YouTube transcripts (falls back to Tor proxy if not provided)
     
     // Hide config section and show setup section
     document.getElementById('configSection').style.display = 'none';
@@ -111,19 +115,32 @@ async function fetchYouTubeTranscript() {
     
     try {
         youtubeInfo.style.display = 'block';
-        youtubeInfo.textContent = '⏳ Fetching YouTube transcript...';
+        
+        // Show appropriate loading message based on whether Supadata API key is provided
+        if (supadataApiKey) {
+            youtubeInfo.textContent = '⏳ Fetching YouTube transcript via Supadata.ai...';
+        } else {
+            youtubeInfo.textContent = '⏳ Fetching YouTube transcript via Tor proxy (may be slower)...';
+        }
         
         const languageCode = language === 'english' ? 'en' : 'id';
+        
+        const requestBody = {
+            video_url: youtubeUrl,
+            languages: [languageCode, 'en']
+        };
+        
+        // Add Supadata API key if provided
+        if (supadataApiKey) {
+            requestBody.supadata_api_key = supadataApiKey;
+        }
         
         const response = await fetch(`${BACKEND_URL}/api/transcript`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                video_url: youtubeUrl,
-                languages: [languageCode, 'en']
-            })
+            body: JSON.stringify(requestBody)
         });
         
         const data = await response.json();
@@ -133,7 +150,10 @@ async function fetchYouTubeTranscript() {
         }
         
         documentContent = data.transcript;
-        youtubeInfo.textContent = `✅ Transcript loaded successfully (${data.snippet_count} snippets, ${data.language})`;
+        
+        // Show success message with method used
+        const methodText = data.method === 'supadata' ? '(via Supadata.ai)' : '(via Tor proxy)';
+        youtubeInfo.textContent = `✅ Transcript loaded successfully ${methodText} - ${data.snippet_count} snippets, ${data.language}`;
         youtubeInfo.style.background = '#e8f5e9';
         youtubeInfo.style.color = '#2e7d32';
         
