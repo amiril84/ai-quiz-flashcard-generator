@@ -65,107 +65,163 @@ git push origin main
 
 ---
 
-## Phase 2: Update Render Backend Configuration
+## Phase 2: Deploy with Docker (Two Options)
 
-⚠️ **IMPORTANT:** Auto-deploy will NOT automatically switch from Python to Docker. You must manually change the runtime setting.
+⚠️ **CRITICAL DISCOVERY:** Render **does NOT allow** changing the runtime type of an existing service. Once a service is created as "Python", it cannot be converted to "Docker". You must use one of these approaches:
 
-### Step 5: Log into Render Dashboard
+### Understanding the Limitation
 
-1. Open browser and go to: https://dashboard.render.com
-2. Log in with your credentials
-3. You should see your services listed
+**The Problem:**
+- Your existing backend service was created with "Python 3" runtime
+- Render service types are **immutable** - they cannot be changed
+- There's no "Runtime" dropdown in Settings to switch from Python to Docker
 
-### Step 6: Navigate to Your Backend Service
-
-1. Find your backend service (e.g., "ai-quiz-backend")
-2. **Click on the service name** to open service details
-3. You should see the service overview page
-
-### Step 7: Stop Auto-Deploy Temporarily
-
-⚠️ **Critical Step:** This prevents Render from deploying with old configuration while you're making changes.
-
-1. Click on the **"Settings"** tab (top navigation)
-2. Scroll down to find **"Auto-Deploy"** section
-3. **Toggle OFF** the "Auto-Deploy" switch
-4. Click **"Save Changes"** button at the bottom
-5. Wait for confirmation message
-
-**Why this matters:** Without this, Render might try to deploy with Python runtime while you're updating settings, causing conflicts.
-
-### Step 8: Change Runtime to Docker
-
-Still in the Settings tab:
-
-1. Scroll to **"Build & Deploy"** section
-2. Find **"Environment"** or **"Runtime"** dropdown
-3. **Change from "Python 3" to "Docker"**
-4. New fields will appear:
-   - **Dockerfile Path:** Enter `./Dockerfile`
-   - Leave other Docker settings as default
-
-### Step 9: Clear Old Build Commands
-
-Since Docker handles building and starting the app, remove the old Python commands:
-
-1. Find **"Build Command"** field
-2. **Delete** the existing command (e.g., `pip install -r requirements.txt`)
-3. Leave it **blank** or **empty**
-4. Find **"Start Command"** field
-5. **Delete** the existing command (e.g., `gunicorn --chdir backend...`)
-6. Leave it **blank** or **empty**
-
-**Why:** The Dockerfile contains all build and start instructions.
-
-### Step 10: Update Root Directory
-
-1. Find **"Root Directory"** setting
-2. **Change from** `backend` **to** `.` (single dot)
-3. This points to the repository root where Dockerfile is located
-
-**Before:** `backend`  
-**After:** `.`
-
-### Step 11: Verify Environment Variables
-
-1. Scroll to **"Environment Variables"** section
-2. Verify **PORT** exists (usually auto-generated)
-3. **Remove** `PYTHON_VERSION` if it exists (not needed for Docker)
-4. No other environment variables needed for this fix
-
-**Final environment variables:**
-- `PORT` = (auto-generated) ✓
-
-### Step 12: Save All Changes
-
-1. Scroll to bottom of Settings page
-2. Click **"Save Changes"** button
-3. Wait for "Settings saved successfully" confirmation
-
-### Step 13: Re-enable Auto-Deploy
-
-1. Scroll back to **"Auto-Deploy"** section
-2. **Toggle ON** the "Auto-Deploy" switch
-3. Click **"Save Changes"**
-4. Confirmation message should appear
+**The Solution:**
+You have two options to deploy the Docker-based Tor proxy solution:
 
 ---
 
-## Phase 3: Manual Deploy (First Time)
+## OPTION 1: Blueprint Deployment (RECOMMENDED ✅)
 
-### Step 14: Trigger Manual Deploy
+This is the easiest and most maintainable approach using your existing `render.yaml` file.
 
-1. Go to top of the page
-2. Look for **"Manual Deploy"** section or button
-3. Click **"Deploy latest commit"** dropdown
-4. Select **"Clear build cache & deploy"**
+### Step 5: Delete Existing Backend Service
 
-**Why "Clear build cache"?**
-- Ensures fresh Docker build
-- Prevents conflicts with old Python build artifacts
-- Recommended for first Docker deployment
+⚠️ **Important:** You'll recreate it immediately, so don't worry!
 
-### Step 15: Monitor Deployment Logs
+1. Go to Render Dashboard: https://dashboard.render.com
+2. Click on your existing **backend service** (e.g., "ai-quiz-backend")
+3. Go to **"Settings"** tab
+4. Scroll to the very bottom
+5. Find **"Delete Web Service"** section
+6. Click **"Delete Web Service"** button
+7. Type the service name to confirm
+8. Click **"Delete"**
+
+**What happens:**
+- Service is deleted
+- No code is lost (it's all in GitHub)
+- You'll recreate it in the next step
+
+### Step 6: Deploy Using Blueprint
+
+1. In Render Dashboard, click **"New +"** button (top right)
+2. Select **"Blueprint"**
+3. Connect your GitHub repository (if not already connected)
+4. Render will automatically detect your `render.yaml` file
+5. You'll see a preview showing:
+   - Backend service (Docker-based)
+   - Frontend service (Static site)
+6. Click **"Apply"** button
+
+**What happens:**
+- Render reads your `render.yaml`
+- Creates a NEW backend service with Docker runtime automatically
+- Creates frontend service (or updates if it exists)
+- No manual configuration needed!
+
+### Step 7: Monitor Blueprint Deployment
+
+1. Watch the deployment progress
+2. Both services will deploy simultaneously
+3. Backend will take 10-15 minutes (first Docker build)
+4. Frontend will take 2-5 minutes
+
+**Expected status:**
+```
+✅ Backend: Building Docker image...
+✅ Frontend: Deploying static files...
+```
+
+### Step 8: Note Your New Backend URL
+
+⚠️ **IMPORTANT:** Your backend will have a **new URL**!
+
+1. Once backend deployment completes, find the URL
+2. It will be something like: `https://ai-quiz-backend-xxxx.onrender.com`
+3. **Copy this URL** - you'll need it for Step 9
+
+### Step 9: Update Frontend with New Backend URL
+
+Since your backend URL changed, update the frontend:
+
+1. Open `script.js` in your local repository
+2. Find the BACKEND_URL line:
+   ```javascript
+   const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+       ? 'http://localhost:5000'
+       : 'https://your-backend-name.onrender.com'; // ← Update this
+   ```
+3. Replace with your **new backend URL** from Step 8
+4. Save the file
+
+### Step 10: Commit and Push Frontend Update
+
+```bash
+git add script.js
+git commit -m "Update backend URL after Blueprint deployment"
+git push origin main
+```
+
+**What happens:**
+- Render detects the push
+- Auto-deploys frontend with new backend URL
+- Frontend now points to Docker-based backend
+
+### Step 11: Verify Deployment
+
+1. Check backend URL: `https://your-new-backend-url.onrender.com/health`
+2. Should return: `{"status": "healthy"}`
+3. Check frontend URL - should load normally
+
+**Blueprint deployment complete! Skip to Phase 3.**
+
+---
+
+## OPTION 2: Manual Service Creation (Alternative)
+
+If you prefer not to use Blueprint, create a new Docker service manually.
+
+### Step 5: Delete Existing Backend Service
+
+Same as Option 1, Step 5 above.
+
+### Step 6: Create New Docker Service
+
+1. In Render Dashboard, click **"New +"** → **"Web Service"**
+2. Connect your GitHub repository
+3. Configure the service:
+
+**Basic Settings:**
+- **Name:** `ai-quiz-backend` (or choose new name)
+- **Region:** Oregon (or closest to your users)
+- **Branch:** `main`
+- **Root Directory:** `.` (repository root)
+- **Environment:** **Docker** ⚠️ (NOT Python!)
+
+**Build & Deploy:**
+- **Dockerfile Path:** `./Dockerfile`
+- Build Command: (leave blank - Docker handles it)
+- Start Command: (leave blank - Docker handles it)
+
+**Instance Type:**
+- Select **Free** or **Starter**
+
+4. Click **"Create Web Service"**
+
+### Step 7: Monitor Deployment
+
+Same as Blueprint Option - watch logs for Docker build progress.
+
+### Step 8-11: Update Frontend
+
+Same as Blueprint Option - update `script.js` with new backend URL, commit, and push.
+
+---
+
+## Phase 3: Monitor Deployment Logs
+
+### Step 12: Watch the Build Process
 
 1. Click on **"Logs"** tab (top navigation)
 2. You'll see live deployment logs
@@ -211,7 +267,7 @@ Step 8/8 : CMD ["/app/start.sh"]
 
 - **Subsequent builds:** 5-10 minutes (Docker layer caching speeds this up)
 
-### Step 16: Verify Deployment Success
+### Step 13: Verify Deployment Success
 
 Once logs show "Your service is live 🎉":
 
@@ -234,7 +290,7 @@ Once logs show "Your service is live 🎉":
 
 ## Phase 4: Test YouTube Transcript Functionality
 
-### Step 17: Test YouTube Transcripts
+### Step 14: Test YouTube Transcripts
 
 1. Open your **frontend URL** in a browser
 2. Navigate to the YouTube transcript section
@@ -264,7 +320,7 @@ If you see retry attempts (normal):
 [INFO] Attempt 2 successful
 ```
 
-### Step 18: Test Edge Cases
+### Step 15: Test Edge Cases
 
 Try these scenarios:
 
@@ -287,7 +343,7 @@ Try these scenarios:
 }
 ```
 
-### Step 19: Verify Other Features Still Work
+### Step 16: Verify Other Features Still Work
 
 **Critical:** Ensure Tor proxy only affects YouTube, not other features.
 
@@ -316,7 +372,7 @@ Test these at **normal speed** (no slowdown):
 
 ## Phase 5: Monitor and Verify
 
-### Step 20: Check Logs for Tor Success
+### Step 17: Check Logs for Tor Success
 
 In Render dashboard → Logs tab:
 
@@ -334,7 +390,7 @@ In Render dashboard → Logs tab:
 ❌ Connection refused to 127.0.0.1:9050
 ```
 
-### Step 21: Monitor First Few Requests
+### Step 18: Monitor First Few Requests
 
 Watch the logs as you make the first few YouTube transcript requests:
 
@@ -359,7 +415,7 @@ Watch the logs as you make the first few YouTube transcript requests:
 [ERROR] Failed after 3 attempts
 ```
 
-### Step 22: Performance Check
+### Step 19: Performance Check
 
 Make 5-10 YouTube transcript requests and note:
 - **Average response time:** Should be 2-5 seconds
