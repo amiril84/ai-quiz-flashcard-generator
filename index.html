@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Quiz Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 AI Quiz & Flashcard Generator</h1>
+            <p class="subtitle">Generate interactive quizzes and flashcards from your documents using AI</p>
+        </header>
+
+        <!-- API Configuration Section -->
+        <div class="config-section" id="configSection">
+            <h2>⚙️ API Configuration</h2>
+            <div class="form-group">
+                <label for="apiKey">OpenRouter API Key:</label>
+                <input type="password" id="apiKey" placeholder="Enter your OpenRouter API key" />
+            </div>
+            <div class="form-group">
+                <label for="modelName">Model Name:</label>
+                <input type="text" id="modelName" value="google/gemini-2.0-flash-exp:free" placeholder="e.g., google/gemini-2.0-flash-exp:free" />
+            </div>
+            <div class="form-group">
+                <label for="firecrawlApiKey">Firecrawl API Key (for website scraping):</label>
+                <input type="password" id="firecrawlApiKey" placeholder="Enter your Firecrawl API key (optional)" />
+                <small style="color: #666;">Get your free API key at <a href="https://firecrawl.dev" target="_blank">firecrawl.dev</a></small>
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig()">Save Configuration</button>
+        </div>
+
+        <!-- Quiz Setup Section -->
+        <div class="setup-section" id="setupSection" style="display: none;">
+            <h2>📄 Create Your Learning Content</h2>
+            
+            <div class="form-group">
+                <label for="contentSource">Content Source:</label>
+                <select id="contentSource" onchange="updateContentSource()">
+                    <option value="document">Upload Document</option>
+                    <option value="youtube">YouTube Video URL</option>
+                    <option value="website">Website URL</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="documentUploadGroup">
+                <label for="documentUpload">Upload Document:</label>
+                <input type="file" id="documentUpload" accept=".txt,.pdf,.doc,.docx" />
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+
+            <div class="form-group" id="youtubeUrlGroup" style="display: none;">
+                <label for="youtubeUrl">YouTube Video URL:</label>
+                <input type="text" id="youtubeUrl" placeholder="Enter YouTube video URL (e.g., https://www.youtube.com/watch?v=xxxxx)" />
+                <div class="file-info" id="youtubeInfo"></div>
+            </div>
+
+            <div class="form-group" id="websiteUrlGroup" style="display: none;">
+                <label for="websiteUrl">Website URL:</label>
+                <input type="text" id="websiteUrl" placeholder="Enter website URL (e.g., https://example.com/article)" />
+                <div class="file-info" id="websiteInfo"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="contentType">Content Type:</label>
+                <select id="contentType" onchange="updateContentTypeOptions()">
+                    <option value="quiz">Interactive Quiz</option>
+                    <option value="flashcard">Flash Cards</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="numQuestionsGroup">
+                <label for="numQuestions">Number of Questions:</label>
+                <input type="number" id="numQuestions" min="1" max="20" value="5" />
+            </div>
+
+            <div class="form-group" id="numCardsGroup" style="display: none;">
+                <label for="numCards">Number of Flash Cards:</label>
+                <input type="number" id="numCards" min="1" max="30" value="10" />
+            </div>
+
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language">
+                    <option value="english">English</option>
+                    <option value="indonesian">Indonesian</option>
+                </select>
+            </div>
+
+            <button class="btn btn-success" onclick="generateContent()" id="generateBtn">🚀 Generate Quiz</button>
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingText">Generating content with AI...</p>
+            </div>
+        </div>
+
+        <!-- Quiz Practice Section -->
+        <div class="quiz-section" id="quizSection" style="display: none;">
+            <div class="quiz-header">
+                <h2>📝 Practice Mode</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="question-counter" id="questionCounter"></p>
+            </div>
+
+            <div class="question-container" id="questionContainer">
+                <!-- Questions will be dynamically inserted here -->
+            </div>
+
+            <div class="explanation-container" id="explanationContainer" style="display: none;">
+                <!-- Explanation will be shown here -->
+            </div>
+
+            <div class="quiz-actions">
+                <button class="btn btn-danger" onclick="stopQuiz()" id="stopQuizBtn">🛑 Stop Quiz</button>
+                <button class="btn btn-secondary" onclick="showResults()" style="display: none;" id="resultsBtn">View Results</button>
+                <button class="btn btn-primary" onclick="nextQuestion()" style="display: none;" id="nextBtn">Next Question</button>
+            </div>
+        </div>
+
+        <!-- Flashcard Section -->
+        <div class="flashcard-section" id="flashcardSection" style="display: none;">
+            <div class="flashcard-header">
+                <h2>🗂️ Flash Cards</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="flashcardProgressFill"></div>
+                </div>
+                <p class="card-counter" id="cardCounter"></p>
+            </div>
+
+            <div class="flashcard-container" id="flashcardContainer">
+                <div class="flashcard" id="flashcard" onclick="flipCard()">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <div class="flashcard-content" id="flashcardFront"></div>
+                            <div class="flip-hint">Click to flip</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <div class="flashcard-content" id="flashcardBack"></div>
+                            <div class="flip-hint">Click to flip back</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flashcard-actions">
+                <button class="btn btn-secondary" onclick="previousCard()" id="prevCardBtn">← Previous</button>
+                <button class="btn btn-primary" onclick="nextCard()" id="nextCardBtn">Next →</button>
+                <button class="btn btn-success" onclick="resetApp()" style="margin-left: 20px;">Create New Content</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>🎉 Quiz Results</h2>
+            <div class="score-display" id="scoreDisplay"></div>
+            <div class="results-details" id="resultsDetails"></div>
+            <button class="btn btn-primary" onclick="resetApp()">Create New Content</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
