@@ -241,6 +241,7 @@ You can use other Gemini models available on OpenRouter:
 - Try using a different video URL
 - Ensure Python and required packages are installed correctly
 - Some videos may not have transcripts available
+- **Note**: If you see an AttributeError about 'list_transcripts', see [YOUTUBE_API_FIX.md](YOUTUBE_API_FIX.md) for the solution
 
 **Website scraping fails:**
 - Make sure the backend server is running (`http://localhost:5000`)
@@ -255,6 +256,14 @@ You can use other Gemini models available on OpenRouter:
 - Install dependencies manually: `pip install -r requirements.txt`
 - Check if port 5000 is already in use by another application
 - Try running the app.py file directly: `python app.py`
+
+## 📚 Additional Documentation
+
+For specific issues and their solutions, see:
+- [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) - Complete deployment guide for Render
+- [YOUTUBE_API_FIX.md](YOUTUBE_API_FIX.md) - YouTube Transcript API fix documentation
+- [YOUTUBE_PROXY_FIX.md](YOUTUBE_PROXY_FIX.md) - YouTube proxy configuration guide
+- [REDEPLOYMENT_GUIDE.md](REDEPLOYMENT_GUIDE.md) - Redeployment procedures
 
 ## 📄 License
 

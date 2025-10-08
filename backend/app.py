@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
+from youtube_transcript_api.proxies import GenericProxyConfig
 from firecrawl import FirecrawlApp
 import re
 import os
@@ -49,48 +50,34 @@ def get_transcript():
         # Extract video ID from URL
         video_id = extract_video_id(video_url)
         
-        # Configure Tor SOCKS5 proxy
-        proxies = {
-            "https": "socks5://127.0.0.1:9050",
-            "http": "socks5://127.0.0.1:9050"
-        }
+        # Configure Tor SOCKS5 proxy using GenericProxyConfig
+        proxy_config = GenericProxyConfig(
+            http_url="socks5://127.0.0.1:9050",
+            https_url="socks5://127.0.0.1:9050",
+        )
         
         # Retry logic with exponential backoff
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                # Fetch transcript with proxy
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
+                # Create API instance with proxy configuration
+                ytt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
                 
-                # Try to get transcript in requested languages
-                transcript = None
-                for lang in languages:
-                    try:
-                        transcript = transcript_list.find_transcript([lang])
-                        break
-                    except:
-                        continue
+                # Fetch transcript directly using the new API
+                fetched_transcript = ytt_api.fetch(video_id, languages=languages)
                 
-                # If no transcript found in requested languages, get any available
-                if transcript is None:
-                    transcript = transcript_list.find_transcript(transcript_list._manually_created_transcripts.keys() or 
-                                                                transcript_list._generated_transcripts.keys())
-                
-                # Fetch the actual transcript data
-                transcript_data = transcript.fetch()
-                
-                # Convert transcript to text
-                transcript_text = ' '.join([item['text'] for item in transcript_data])
+                # Convert transcript to text (join snippet text)
+                transcript_text = ' '.join([snippet.text for snippet in fetched_transcript])
                 
                 # Return transcript data
                 return jsonify({
                     'success': True,
-                    'video_id': video_id,
+                    'video_id': fetched_transcript.video_id,
                     'transcript': transcript_text,
-                    'language': transcript.language,
-                    'language_code': transcript.language_code,
-                    'is_generated': transcript.is_generated,
-                    'snippet_count': len(transcript_data)
+                    'language': fetched_transcript.language,
+                    'language_code': fetched_transcript.language_code,
+                    'is_generated': fetched_transcript.is_generated,
+                    'snippet_count': len(fetched_transcript)
                 })
                 
             except (TranscriptsDisabled, VideoUnavailable, NoTranscriptFound) as e:
@@ -135,18 +122,21 @@ def list_transcripts():
         # Extract video ID from URL
         video_id = extract_video_id(video_url)
         
-        # Configure Tor SOCKS5 proxy
-        proxies = {
-            "https": "socks5://127.0.0.1:9050",
-            "http": "socks5://127.0.0.1:9050"
-        }
+        # Configure Tor SOCKS5 proxy using GenericProxyConfig
+        proxy_config = GenericProxyConfig(
+            http_url="socks5://127.0.0.1:9050",
+            https_url="socks5://127.0.0.1:9050",
+        )
         
         # Retry logic with exponential backoff
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                # List available transcripts with proxy
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
+                # Create API instance with proxy configuration
+                ytt_api = YouTubeTranscriptApi(proxy_config=proxy_config)
+                
+                # List available transcripts using the new API
+                transcript_list = ytt_api.list(video_id)
                 
                 # Format transcript information
                 transcripts = []
