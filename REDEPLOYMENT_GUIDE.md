@@ -110,28 +110,33 @@ This is the easiest and most maintainable approach using your existing `render.y
 3. Connect your GitHub repository (if not already connected)
 4. Render will automatically detect your `render.yaml` file
 5. You'll see a preview showing:
-   - Backend service (Docker-based)
-   - Frontend service (Static site)
+   - Backend service (Docker-based) ✓
+   - **Note:** Frontend is NOT included (it remains as-is)
 6. Click **"Apply"** button
 
 **What happens:**
 - Render reads your `render.yaml`
 - Creates a NEW backend service with Docker runtime automatically
-- Creates frontend service (or updates if it exists)
+- Frontend service is unchanged (keeps running with current configuration)
 - No manual configuration needed!
+
+**Why frontend not included?**
+- Render Blueprint doesn't support static sites in yaml format
+- Your existing frontend is working fine and doesn't need Docker
+- You'll just update the backend URL in frontend code after deployment
 
 ### Step 7: Monitor Blueprint Deployment
 
 1. Watch the deployment progress
-2. Both services will deploy simultaneously
+2. Only the backend service will deploy
 3. Backend will take 10-15 minutes (first Docker build)
-4. Frontend will take 2-5 minutes
 
 **Expected status:**
 ```
 ✅ Backend: Building Docker image...
-✅ Frontend: Deploying static files...
 ```
+
+**Note:** Frontend remains unchanged from your existing deployment.
 
 ### Step 8: Note Your New Backend URL
 

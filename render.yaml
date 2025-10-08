@@ -1,4 +1,5 @@
-# Render deployment configuration
+# Render Blueprint configuration for Docker deployment with Tor proxy
+# Note: Frontend is deployed separately as a static site (not included in Blueprint)
 services:
   # Backend Flask API with Tor proxy
   - type: web
@@ -10,15 +11,3 @@ services:
     envVars:
       - key: PORT
         value: 10000
-    
-  # Frontend Static Site
-  - type: static
-    name: ai-quiz-frontend
-    env: static
-    region: oregon
-    buildCommand: echo "No build needed for static site"
-    staticPublishPath: .
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
