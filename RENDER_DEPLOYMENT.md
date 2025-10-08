@@ -15,15 +15,36 @@ Before deploying, ensure you have:
 
 ✅ All changes from this guide have been applied:
 - ✅ `backend/requirements.txt` includes Gunicorn
-- ✅ `backend/app.py` configured for production
+- ✅ `backend/app.py` configured for production with Tor proxy support
 - ✅ `script.js` updated with environment-aware backend URL
 - ✅ `render.yaml` configuration file created
+- ✅ `Dockerfile` created for Docker-based deployment with Tor
 
 ## 🎯 Deployment Strategy
 
 This app uses a **two-service deployment**:
-1. **Backend** - Python Flask API (Web Service)
+1. **Backend** - Python Flask API with Tor proxy (Docker Web Service)
 2. **Frontend** - Static HTML/CSS/JS (Static Site)
+
+### 🔐 YouTube Transcript Solution: Tor Proxy
+
+**Issue**: YouTube blocks IP addresses from cloud providers (AWS, GCP, Azure, Render, etc.), causing transcript fetching to fail with IP blocking errors.
+
+**Solution**: This deployment uses **Tor SOCKS5 proxy** to bypass YouTube's IP restrictions:
+- ✅ **100% Free** - No additional costs
+- ✅ **Safe** - No YouTube account required or risk of banning
+- ✅ **Isolated** - Only YouTube requests use the proxy; Firecrawl and other features run at normal speed
+- ✅ **Reliable** - Includes retry logic with exponential backoff
+
+**How it works**:
+1. Dockerfile installs and runs Tor service
+2. Backend routes YouTube API requests through Tor's SOCKS5 proxy (port 9050)
+3. Tor rotates IP addresses through its network, bypassing cloud provider IP blocks
+4. All other requests (Firecrawl, health checks) use direct connections
+
+**Trade-offs**:
+- YouTube transcripts may take 2-5 seconds longer (acceptable for personal projects)
+- First Tor connection on app startup takes ~15 seconds
 
 ### 📦 Monorepo Structure
 
@@ -49,7 +70,7 @@ This setup prevents unnecessary rebuilds and saves resources.
    git push origin main
    ```
 
-### Step 2: Deploy Backend (Flask API)
+### Step 2: Deploy Backend (Flask API with Tor Proxy)
 
 1. Log in to [Render Dashboard](https://dashboard.render.com)
 2. Click **"New +"** → **"Web Service"**
@@ -60,30 +81,38 @@ This setup prevents unnecessary rebuilds and saves resources.
    - **Name**: `ai-quiz-backend` (or your preferred name)
    - **Region**: Choose closest to your users (e.g., Oregon)
    - **Branch**: `main` (or your default branch)
-   - **Root Directory**: `backend` ⚠️ **IMPORTANT: Set this to `backend` for monorepo deployment**
-   - **Runtime**: `Python 3`
+   - **Root Directory**: `.` ⚠️ **IMPORTANT: Leave as root (`.`) for Docker deployment**
+   - **Runtime**: `Docker`
 
    **Build & Deploy Settings:**
-   - **Build Command**: 
-     ```
-     pip install -r requirements.txt
-     ```
-   - **Start Command**: 
-     ```
-     gunicorn --bind 0.0.0.0:$PORT app:app
-     ```
+   - **Dockerfile Path**: `./Dockerfile`
+   - Render will automatically detect and use the Dockerfile
 
    **Advanced Settings (Click "Advanced"):**
    - **Environment Variables**:
-     - `PYTHON_VERSION` = `3.11.0`
-     - Add any other environment variables your app needs
+     - `PORT` = `10000` (automatically set by Dockerfile)
+     - No other environment variables needed
 
    **Instance Type:**
    - Select **Free** (for testing) or **Starter** (for production)
+   - **Note**: First deployment may take 10-15 minutes to build Docker image and start Tor
 
 5. Click **"Create Web Service"**
-6. Wait for deployment to complete (5-10 minutes)
-7. **Copy your backend URL** (e.g., `https://ai-quiz-backend.onrender.com`)
+6. Wait for deployment to complete (10-15 minutes first time, faster on subsequent deploys)
+7. **Monitor the logs** to see:
+   - Docker image building
+   - Tor starting up
+   - Flask application launching
+8. **Copy your backend URL** (e.g., `https://ai-quiz-backend.onrender.com`)
+
+**Expected Startup Logs:**
+```
+==> Building...
+==> Tor starting...
+==> Waiting for Tor to start...
+==> Tor started successfully
+==> Starting gunicorn
+```
 
 ### Step 3: Update Frontend with Backend URL
 
@@ -164,12 +193,22 @@ Set these in your backend web service settings:
 
 **Problem**: Backend won't start
 - **Solution**: Check build logs for errors
-- Verify `requirements.txt` has all dependencies
-- Ensure Python version is set correctly
+- Verify Dockerfile is in repository root
+- Ensure Docker build completes successfully
+- Wait for Tor to start (takes ~15 seconds)
 
 **Problem**: Health check failing
 - **Solution**: Verify `/health` endpoint works
 - Check if Gunicorn is binding to correct port
+- Ensure Tor service started successfully
+
+**Problem**: YouTube transcripts still failing
+- **Solution**: 
+  - Check logs to confirm Tor is running
+  - Verify proxy configuration in `backend/app.py`
+  - Test if Tor service is accessible on port 9050
+  - Try redeploying the service
+  - Check that you're using the Docker deployment (not Python environment)
 
 **Problem**: CORS errors in browser
 - **Solution**: Update CORS settings in `backend/app.py`
@@ -185,10 +224,18 @@ Set these in your backend web service settings:
 - Check browser console for errors
 - Ensure backend service is running
 
-**Problem**: YouTube/Website features not working
-- **Solution**: Check backend logs for errors
-- Verify backend service is running
-- Test API endpoints directly
+**Problem**: YouTube transcripts not working
+- **Solution**: 
+  - Confirm backend is using Docker deployment (check logs for "Tor started successfully")
+  - YouTube requests may take 2-5 seconds longer due to Tor routing
+  - Check for retry attempts in logs (up to 3 retries)
+  - If still failing, Tor exit node may be temporarily blocked - wait a few minutes and try again
+
+**Problem**: Website scraping (Firecrawl) not working
+- **Solution**: 
+  - Verify Firecrawl API key is correct
+  - Check backend logs for specific errors
+  - Note: Firecrawl doesn't use Tor proxy, runs at normal speed
 
 ### Deployment Issues
 
@@ -206,11 +253,12 @@ Set these in your backend web service settings:
 ## 💰 Cost Considerations
 
 ### Free Tier Includes:
-- ✅ 750 hours/month for web services
+- ✅ 750 hours/month for web services (Docker services count the same as Python)
 - ✅ 100 GB bandwidth/month
 - ✅ Unlimited static sites
 - ❌ Services sleep after 15 min inactivity
 - ❌ Slower build times
+- ❌ First wake-up after sleep includes Tor startup (~30 seconds total)
 
 ### Paid Plans:
 - **Starter**: $7/month per service
@@ -226,6 +274,8 @@ Render automatically deploys when you push to your connected branch:
 2. Commit and push to GitHub
 3. Render automatically builds and deploys
 4. Check deployment status in dashboard
+
+**Note**: Docker builds take longer than Python builds (~10-15 minutes first time, ~5-10 minutes for updates), but provide the Tor proxy functionality needed for YouTube transcripts.
 
 To disable auto-deploy:
 - Go to service settings
@@ -269,8 +319,11 @@ To disable auto-deploy:
 ## 📚 Additional Resources
 
 - [Render Documentation](https://render.com/docs)
+- [Render Docker Deployment](https://render.com/docs/docker)
 - [Flask Deployment Guide](https://flask.palletsprojects.com/en/2.3.x/deploying/)
 - [Gunicorn Documentation](https://docs.gunicorn.org/)
+- [Tor Project](https://www.torproject.org/)
+- [YouTube Transcript API](https://github.com/jdepoix/youtube-transcript-api)
 
 ## 🆘 Getting Help
 

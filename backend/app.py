@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import TranscriptsDisabled, VideoUnavailable, NoTranscriptFound
 from firecrawl import FirecrawlApp
 import re
 import os
+import time
 
 app = Flask(__name__)
 
@@ -34,6 +36,7 @@ def extract_video_id(url):
 def get_transcript():
     """
     Fetch YouTube transcript for a given video URL or ID
+    Uses Tor SOCKS5 proxy to bypass IP blocking on cloud platforms
     """
     try:
         data = request.get_json()
@@ -46,25 +49,69 @@ def get_transcript():
         # Extract video ID from URL
         video_id = extract_video_id(video_url)
         
-        # Initialize YouTube Transcript API
-        ytt_api = YouTubeTranscriptApi()
+        # Configure Tor SOCKS5 proxy
+        proxies = {
+            "https": "socks5://127.0.0.1:9050",
+            "http": "socks5://127.0.0.1:9050"
+        }
         
-        # Fetch transcript
-        transcript = ytt_api.fetch(video_id, languages=languages)
-        
-        # Convert transcript to text
-        transcript_text = ' '.join([snippet.text for snippet in transcript])
-        
-        # Return transcript data
-        return jsonify({
-            'success': True,
-            'video_id': video_id,
-            'transcript': transcript_text,
-            'language': transcript.language,
-            'language_code': transcript.language_code,
-            'is_generated': transcript.is_generated,
-            'snippet_count': len(transcript)
-        })
+        # Retry logic with exponential backoff
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Fetch transcript with proxy
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
+                
+                # Try to get transcript in requested languages
+                transcript = None
+                for lang in languages:
+                    try:
+                        transcript = transcript_list.find_transcript([lang])
+                        break
+                    except:
+                        continue
+                
+                # If no transcript found in requested languages, get any available
+                if transcript is None:
+                    transcript = transcript_list.find_transcript(transcript_list._manually_created_transcripts.keys() or 
+                                                                transcript_list._generated_transcripts.keys())
+                
+                # Fetch the actual transcript data
+                transcript_data = transcript.fetch()
+                
+                # Convert transcript to text
+                transcript_text = ' '.join([item['text'] for item in transcript_data])
+                
+                # Return transcript data
+                return jsonify({
+                    'success': True,
+                    'video_id': video_id,
+                    'transcript': transcript_text,
+                    'language': transcript.language,
+                    'language_code': transcript.language_code,
+                    'is_generated': transcript.is_generated,
+                    'snippet_count': len(transcript_data)
+                })
+                
+            except (TranscriptsDisabled, VideoUnavailable, NoTranscriptFound) as e:
+                # These errors won't be fixed by retrying
+                return jsonify({
+                    'success': False,
+                    'error': f'Transcript not available: {str(e)}'
+                }), 404
+                
+            except Exception as e:
+                # For other errors, retry with exponential backoff
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # 1s, 2s, 4s
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # Final attempt failed
+                    return jsonify({
+                        'success': False,
+                        'error': f'Failed to retrieve transcript after {max_retries} attempts: {str(e)}'
+                    }), 500
         
     except Exception as e:
         return jsonify({
@@ -76,6 +123,7 @@ def get_transcript():
 def list_transcripts():
     """
     List all available transcripts for a video
+    Uses Tor SOCKS5 proxy to bypass IP blocking on cloud platforms
     """
     try:
         data = request.get_json()
@@ -87,27 +135,53 @@ def list_transcripts():
         # Extract video ID from URL
         video_id = extract_video_id(video_url)
         
-        # Initialize YouTube Transcript API
-        ytt_api = YouTubeTranscriptApi()
+        # Configure Tor SOCKS5 proxy
+        proxies = {
+            "https": "socks5://127.0.0.1:9050",
+            "http": "socks5://127.0.0.1:9050"
+        }
         
-        # List available transcripts
-        transcript_list = ytt_api.list(video_id)
-        
-        # Format transcript information
-        transcripts = []
-        for transcript in transcript_list:
-            transcripts.append({
-                'language': transcript.language,
-                'language_code': transcript.language_code,
-                'is_generated': transcript.is_generated,
-                'is_translatable': transcript.is_translatable
-            })
-        
-        return jsonify({
-            'success': True,
-            'video_id': video_id,
-            'transcripts': transcripts
-        })
+        # Retry logic with exponential backoff
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # List available transcripts with proxy
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id, proxies=proxies)
+                
+                # Format transcript information
+                transcripts = []
+                for transcript in transcript_list:
+                    transcripts.append({
+                        'language': transcript.language,
+                        'language_code': transcript.language_code,
+                        'is_generated': transcript.is_generated,
+                        'is_translatable': transcript.is_translatable
+                    })
+                
+                return jsonify({
+                    'success': True,
+                    'video_id': video_id,
+                    'transcripts': transcripts
+                })
+                
+            except (TranscriptsDisabled, VideoUnavailable, NoTranscriptFound) as e:
+                # These errors won't be fixed by retrying
+                return jsonify({
+                    'success': False,
+                    'error': f'Transcripts not available: {str(e)}'
+                }), 404
+                
+            except Exception as e:
+                # For other errors, retry with exponential backoff
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Failed to list transcripts after {max_retries} attempts: {str(e)}'
+                    }), 500
         
     except Exception as e:
         return jsonify({

@@ -1,18 +1,15 @@
 # Render deployment configuration
 services:
-  # Backend Flask API
+  # Backend Flask API with Tor proxy
   - type: web
     name: ai-quiz-backend
-    env: python
+    env: docker
     region: oregon
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn --chdir backend --bind 0.0.0.0:$PORT app:app
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: PORT
-        generateValue: true
+        value: 10000
     
   # Frontend Static Site
   - type: static
