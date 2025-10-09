@@ -6,9 +6,11 @@ import ResultsPage from './components/ResultsPage'
 import './App.css'
 
 // Configure backend URL based on environment
-const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:5000'
-  : 'https://ai-quiz-backend-qbm7.onrender.com'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://ai-quiz-backend-qbm7.onrender.com'
+)
 
 function App() {
   const [currentView, setCurrentView] = useState('setup')
