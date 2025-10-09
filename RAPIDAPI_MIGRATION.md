@@ -25,7 +25,7 @@ The current implementation uses two methods for fetching YouTube transcripts:
 
 ### API Key
 ```
-x-rapidapi-key: 5c4d84b79amsh11308407580c15dp1c1594jsnc66a22215dca
+x-rapidapi-key: YOUR_RAPIDAPI_KEY_HERE
 x-rapidapi-host: youtube-transcript3.p.rapidapi.com
 ```
 
@@ -116,7 +116,7 @@ python-dotenv==1.0.0
 
 #### Add New Variable:
 ```
-RAPIDAPI_KEY=5c...
+RAPIDAPI_KEY=your-rapidapi-key-here
 ```
 
 #### Load in `app.py`:

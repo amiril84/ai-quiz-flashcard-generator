@@ -7,7 +7,7 @@ url = "https://youtube-transcript3.p.rapidapi.com/api/transcript"
 querystring = {"videoId":"ZacjOVVgoLY"}
 
 headers = {
-	"x-rapidapi-key": "5c4d84b79amsh11308407580c15dp1c1594jsnc66a22215dca",
+	"x-rapidapi-key": "YOUR_RAPIDAPI_KEY_HERE",
 	"x-rapidapi-host": "youtube-transcript3.p.rapidapi.com"
 }
 
