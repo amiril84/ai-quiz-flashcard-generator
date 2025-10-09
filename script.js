@@ -143,7 +143,7 @@ async function fetchYouTubeTranscript() {
         documentContent = data.transcript;
         
         // Show success message with method used
-        const methodText = data.method === 'supadata' ? '(via Supadata.ai)' : '(via Tor proxy)';
+        const methodText = '(via RapidAPI)';
         youtubeInfo.textContent = `✅ Transcript loaded successfully ${methodText} - ${data.snippet_count} snippets, ${data.language}`;
         youtubeInfo.style.background = '#e8f5e9';
         youtubeInfo.style.color = '#2e7d32';
