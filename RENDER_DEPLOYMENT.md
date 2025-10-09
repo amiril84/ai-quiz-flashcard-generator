@@ -84,6 +84,50 @@ Ensure your latest code, including the `frontend`, `backend`, `Dockerfile`, and 
 - Check the build logs. The most common issue is a failure during `npm install`.
 - Ensure your `frontend/package.json` is valid and all dependencies are correct.
 
+**Vite build fails with path alias errors (e.g., "Could not load .../src/lib/utils.js"):**
+
+This is a known issue with Vite's production build system where path aliases work fine in development but fail during production builds on Render.
+
+**The Problem:**
+- Your frontend uses path aliases (e.g., `@/lib/utils.js`) configured in both `jsconfig.json` and `vite.config.js`
+- During local development, Vite uses esbuild which handles path resolution smoothly
+- During production builds on Render, Vite uses Rollup as the bundler
+- Rollup is more strict about path resolution and may fail to resolve aliases that worked in development
+- The error typically looks like: `ENOENT: no such file or directory, open '/opt/render/project/src/frontend/src/lib/utils.js'`
+
+**Why It Happens:**
+- The `vite-jsconfig-paths` plugin (or similar path resolution plugins) work well with esbuild in development
+- However, these plugins don't always translate properly to Rollup during production builds
+- Rollup requires more explicit path configuration in `vite.config.js`
+- Using relative paths like `"./src"` in the alias can cause resolution issues in Rollup
+
+**The Solution:**
+Update your `frontend/vite.config.js` to use explicit path resolution without the `./` prefix:
+
+```javascript
+// ❌ This can fail in Rollup production builds:
+resolve: {
+  alias: {
+    "@": path.resolve(__dirname, "./src"),
+  },
+}
+
+// ✅ This works reliably in both development and production:
+resolve: {
+  alias: {
+    "@": path.resolve(__dirname, "src"),
+  },
+}
+```
+
+**How to Fix:**
+1. Edit `frontend/vite.config.js`
+2. Change the alias path from `"./src"` to `"src"`
+3. Commit and push the change
+4. Render will automatically rebuild with the fix
+
+This makes the path resolution more explicit for Rollup, ensuring your `@/lib/utils.js` imports resolve correctly during production builds.
+
 **YouTube transcripts don't work on the live site:**
 - Check the backend logs. You should see messages indicating that Tor is running.
 - The first YouTube request after the service starts or wakes up may be slow as Tor connects. Give it up to a minute.
