@@ -20,6 +20,18 @@ A visually appealing web application that generates interactive quizzes and flas
 8.  **Detailed Explanations**: View answers and explanations after each question
 9.  **Comprehensive Results**: See your quiz score and review all questions
 10. **Modern UI**: Built with React, Vite, and Shadcn UI components.
+11. **Robust Input Validation**:
+    -   **Real-time Feedback**: Provides instant, inline error messages for invalid inputs (e.g., incorrect URL formats, empty topics).
+    -   **Smart URL Handling**: Intelligently detects YouTube playlist or channel URLs and guides the user to provide a valid video URL. Warns if a YouTube URL is entered in the website field.
+    -   **Enhanced Security**: Implements client-side checks to prevent common vulnerabilities like XSS and SQL injection patterns.
+
+## 🛡️ Security
+
+This application implements a multi-layered validation strategy to ensure data integrity and prevent common web vulnerabilities.
+
+-   **Client-Side Validation**: Provides immediate feedback to the user for a better experience, catching errors before data is sent to the server.
+-   **Server-Side Validation**: Acts as a critical security gatekeeper, ensuring that all data received by the backend is valid and safe, regardless of client-side checks. (Backend validation is planned and not yet fully implemented).
+-   **Input Sanitization**: Cleans and sanitizes all user inputs to strip out potentially malicious code, such as script tags and SQL injection patterns.
 
 ## 🚀 Getting Started
 
@@ -116,9 +128,18 @@ The frontend is a React application built with Vite.
 ```
 ai-quiz-flashcard-generator/
 ├── frontend/                   # React SPA Frontend
-│   ├── src/                    # Source code
-│   │   ├── components/         # React components
-│   │   └── App.jsx             # Main application component
+│   ├── src/
+│   │   ├── assets/             # Static assets
+│   │   ├── components/         # React components (UI and views)
+│   │   ├── lib/                # Utility functions
+│   │   │   ├── utils.js
+│   │   │   └── validators.js   # Input validation functions
+│   │   ├── App.css             # Main stylesheet
+│   │   ├── App.jsx             # Main application component
+│   │   └── main.jsx            # React entry point
+│   ├── .gitignore
+│   ├── index.html
+│   ├── package.json
 │   └── vite.config.js          # Vite configuration
 ├── backend/                    # Python Backend
 │   ├── app.py                  # Flask server
