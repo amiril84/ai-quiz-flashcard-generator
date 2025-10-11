@@ -21,4 +21,6 @@ Important requirements:
 - Provide a detailed explanation for each correct answer
 - Make questions challenging but fair
 - Questions should be in {{language}}
+- DO NOT include filler phrases like "according to the document", "according to the file", "based on the text", or similar references in questions or explanations
+- Write questions and explanations as direct statements of fact
 - Return ONLY valid JSON, no additional text

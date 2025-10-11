@@ -22,4 +22,6 @@ Important requirements:
 - Avoid lengthy explanations - summarize key points only
 - Cards should be in {{language}}
 - Cover the most important concepts from the document
+- DO NOT include filler phrases like "according to the document", "according to the file", "based on the text", or similar references
+- Write content as direct statements of fact
 - Return ONLY valid JSON, no additional text

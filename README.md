@@ -1,15 +1,19 @@
 # 🧠 AI Quiz & Flashcard Generator (React Edition)
 
-A visually appealing web application that generates interactive quizzes and flashcards from documents or YouTube videos using AI. This version is built with a modern React frontend and a Python Flask backend.
+A visually appealing web application that generates interactive quizzes and flashcards from documents, YouTube videos, websites, or any topic using AI. This version is built with a modern React frontend and a Python Flask backend.
 
 ## ✨ Features
 
 1.  **Multiple Content Sources**:
-    -   Upload text documents (.txt, .pdf, .doc, .docx)
-    -   Provide YouTube video URL to generate content from video transcripts
-    -   Scrape website content from any URL using Firecrawl
-2.  **Dual Content Mode**: Choose between Interactive Quiz or Flash Cards
-3.  **Customizable Quiz**: Choose the number of MCQ questions (1-20)
+    -   **From a Topic**: Type any topic (e.g., "English Grammar") and let the AI generate content from its knowledge base
+    -   **Document Upload**: Upload text documents (.txt)
+    -   **YouTube Video**: Provide a YouTube video URL to generate content from its transcript
+    -   **Website Content**: Scrape any website URL using Firecrawl
+2.  **Adaptive AI Prompts**:
+    -   When generating from a topic, the AI intelligently detects user-specified difficulty and audience (e.g., "for beginners", "for college students")
+    -   Prompts are optimized to avoid filler phrases like "according to the document", resulting in clean, professional output
+3.  **Dual Content Mode**: Choose between an Interactive Quiz or Flash Cards
+4.  **Customizable Quiz**: Choose the number of multiple-choice questions (1-20)
 4.  **Customizable Flashcards**: Choose the number of flash cards (1-30)
 5.  **Multi-language Support**: Generate content in English or Indonesian
 6.  **Interactive Practice Mode**: Take quizzes with immediate feedback
@@ -93,7 +97,7 @@ The frontend is a React application built with Vite.
     -   Enter the AI model name (e.g., `google/gemini-pro-1.5`).
     -   Enter your Firecrawl API key (for website scraping).
     -   Click "Save Configuration".
-3.  **Select Content Source** (Document, YouTube, or Website URL).
+3.  **Select Content Source** (Topic, Document, YouTube, or Website URL).
 4.  **Configure and Generate** your Quiz or Flashcards.
 5.  Interact with the generated content.
 
@@ -111,16 +115,23 @@ The frontend is a React application built with Vite.
 ### File Structure
 ```
 ai-quiz-flashcard-generator/
-├── frontend/               # React SPA Frontend
-│   ├── src/                # Source code
-│   ├── vite.config.js      # Vite configuration
-│   └── package.json        # Frontend dependencies
-├── backend/                # Python Backend
-│   ├── app.py              # Flask server
-│   └── requirements.txt    # Python dependencies
-├── Dockerfile              # Docker config for backend deployment
-├── render.yaml             # Render deployment configuration
-└── README.md               # This file
+├── frontend/                   # React SPA Frontend
+│   ├── src/                    # Source code
+│   │   ├── components/         # React components
+│   │   └── App.jsx             # Main application component
+│   └── vite.config.js          # Vite configuration
+├── backend/                    # Python Backend
+│   ├── app.py                  # Flask server
+│   ├── prompts/                # Directory for AI prompt templates
+│   │   ├── generate_quiz.md
+│   │   ├── generate_flashcard.md
+│   │   ├── generate_quiz_from_topic.md
+│   │   └── generate_flashcard_from_topic.md
+│   └── requirements.txt        # Python dependencies
+├── planning.md                 # Project planning documentation
+├── Dockerfile                  # Docker config for backend deployment
+├── render.yaml                 # Render deployment configuration
+└── README.md                   # This file
 ```
 
 ## 🐛 Troubleshooting

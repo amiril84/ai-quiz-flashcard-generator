@@ -278,7 +278,7 @@ def get_prompt(prompt_type):
     """
     try:
         # Validate prompt type to prevent directory traversal
-        allowed_prompts = ['generate_quiz', 'generate_flashcard', 'enhance_prompt']
+        allowed_prompts = ['generate_quiz', 'generate_flashcard', 'generate_quiz_from_topic', 'generate_flashcard_from_topic', 'enhance_prompt']
         
         if prompt_type not in allowed_prompts:
             return jsonify({

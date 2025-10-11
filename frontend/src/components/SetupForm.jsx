@@ -17,6 +17,7 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
   const [youtubeInfo, setYoutubeInfo] = useState('')
   const [websiteUrl, setWebsiteUrl] = useState('')
   const [websiteInfo, setWebsiteInfo] = useState('')
+  const [topicText, setTopicText] = useState('English Grammar Past Tense')
   const [isScrapingWebsite, setIsScrapingWebsite] = useState(false)
   const [isFetchingYoutube, setIsFetchingYoutube] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -146,6 +147,17 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
   }
 
   const generateContent = async () => {
+    // Handle topic-based generation
+    if (contentSource === 'text') {
+      if (contentType === 'quiz') {
+        await generateQuizFromTopic()
+      } else {
+        await generateFlashcardsFromTopic()
+      }
+      return
+    }
+
+    // Handle document-based generation
     let contentToUse = documentContent
 
     // Fetch content based on source
@@ -329,6 +341,154 @@ Important requirements:
     }
   }
 
+  const generateQuizFromTopic = async () => {
+    if (!topicText.trim()) {
+      alert('Please enter a topic')
+      return
+    }
+
+    if (numQuestions < 1 || numQuestions > 20) {
+      alert('Please enter a number between 1 and 20')
+      return
+    }
+
+    setIsGenerating(true)
+
+    try {
+      const languageText = language === 'english' ? 'English' : 'Indonesian'
+      
+      // Fetch the prompt template from backend
+      const promptResponse = await fetch(`${backendUrl}/api/prompt/generate_quiz_from_topic`)
+      const promptData = await promptResponse.json()
+      
+      if (!promptData.success) {
+        throw new Error('Failed to load prompt template')
+      }
+      
+      // Replace placeholders in the template
+      let prompt = promptData.prompt
+        .replace(/\{\{topic\}\}/g, topicText)
+        .replace(/\{\{numQuestions\}\}/g, numQuestions.toString())
+        .replace(/\{\{language\}\}/g, languageText)
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.href,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const aiResponse = data.choices[0].message.content
+
+      // Extract JSON from response
+      let jsonContent = aiResponse
+      if (aiResponse.includes('```json')) {
+        jsonContent = aiResponse.split('```json')[1].split('```')[0].trim()
+      } else if (aiResponse.includes('```')) {
+        jsonContent = aiResponse.split('```')[1].split('```')[0].trim()
+      }
+
+      const quizResponse = JSON.parse(jsonContent)
+      onQuizGenerated(quizResponse.questions)
+
+    } catch (error) {
+      alert('Error generating quiz: ' + error.message)
+      console.error(error)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const generateFlashcardsFromTopic = async () => {
+    if (!topicText.trim()) {
+      alert('Please enter a topic')
+      return
+    }
+
+    if (numCards < 1 || numCards > 30) {
+      alert('Please enter a number between 1 and 30')
+      return
+    }
+
+    setIsGenerating(true)
+
+    try {
+      const languageText = language === 'english' ? 'English' : 'Indonesian'
+      
+      // Fetch the prompt template from backend
+      const promptResponse = await fetch(`${backendUrl}/api/prompt/generate_flashcard_from_topic`)
+      const promptData = await promptResponse.json()
+      
+      if (!promptData.success) {
+        throw new Error('Failed to load prompt template')
+      }
+      
+      // Replace placeholders in the template
+      let prompt = promptData.prompt
+        .replace(/\{\{topic\}\}/g, topicText)
+        .replace(/\{\{numCards\}\}/g, numCards.toString())
+        .replace(/\{\{language\}\}/g, languageText)
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.href,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const aiResponse = data.choices[0].message.content
+
+      // Extract JSON from response
+      let jsonContent = aiResponse
+      if (aiResponse.includes('```json')) {
+        jsonContent = aiResponse.split('```json')[1].split('```')[0].trim()
+      } else if (aiResponse.includes('```')) {
+        jsonContent = aiResponse.split('```')[1].split('```')[0].trim()
+      }
+
+      const flashcardResponse = JSON.parse(jsonContent)
+      onFlashcardsGenerated(flashcardResponse.cards)
+
+    } catch (error) {
+      alert('Error generating flashcards: ' + error.message)
+      console.error(error)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const handleContentSourceChange = (value) => {
     setContentSource(value)
     setDocumentContent('')
@@ -349,10 +509,10 @@ Important requirements:
         {/* Content Source */}
         <div className="space-y-3">
           <label className="text-sm font-medium">Content Source</label>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => handleContentSourceChange('document')}
-              className={`flex-1 h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
+              className={`h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
                 contentSource === 'document'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -362,7 +522,7 @@ Important requirements:
             </button>
             <button
               onClick={() => handleContentSourceChange('youtube')}
-              className={`flex-1 h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
+              className={`h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
                 contentSource === 'youtube'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -372,13 +532,23 @@ Important requirements:
             </button>
             <button
               onClick={() => handleContentSourceChange('website')}
-              className={`flex-1 h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
+              className={`h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
                 contentSource === 'website'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
               }`}
             >
               🌐 Website
+            </button>
+            <button
+              onClick={() => handleContentSourceChange('text')}
+              className={`h-10 px-6 rounded-md text-sm font-medium transition-all inline-flex items-center justify-center gap-2 ${
+                contentSource === 'text'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              📝 Text
             </button>
           </div>
         </div>
@@ -416,7 +586,7 @@ Important requirements:
             <label className="text-sm font-medium">Website URL</label>
             <Input
               type="url"
-              placeholder="https://example.com"
+              placeholder="https://id.wikipedia.org/wiki/..."
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
             />
@@ -425,6 +595,47 @@ Important requirements:
                 {websiteInfo}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Topic Text Input */}
+        {contentSource === 'text' && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Enter Topic</label>
+              <Input
+                type="text"
+                placeholder="e.g., English Grammar Past Tense"
+                value={topicText}
+                onChange={(e) => setTopicText(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Sample Topics (click to use)</label>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTopicText('Alternative Energy and Sustainability for college students')}
+                  className="px-4 py-2 text-sm text-left rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Alternative Energy and Sustainability for college students
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTopicText('Pangeran Diponegoro dan Perang Jawa untuk siswa SMP')}
+                  className="px-4 py-2 text-sm text-left rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Pangeran Diponegoro dan Perang Jawa untuk siswa SMP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTopicText('Hukum Gravitasi Newton for general public')}
+                  className="px-4 py-2 text-sm text-left rounded-md bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Hukum Gravitasi Newton for general public
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
