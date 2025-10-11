@@ -286,6 +286,27 @@ export function containsSqlInjectionPattern(text) {
  * @param {string} text - The text to check
  * @returns {boolean}
  */
+export function isUrl(text) {
+  if (!text) return false;
+  // A simple regex to check for a URL pattern.
+  // This is not exhaustive but covers common cases.
+  const urlPattern = new RegExp(
+    '^(https?:\\/\\/)?' + // protocol
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+    '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+    '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+      '(\\#[-a-z\\d_]*)?$', // fragment locator
+    'i'
+  );
+  return !!urlPattern.test(text);
+}
+
+/**
+ * Check if text contains XSS patterns
+ * @param {string} text - The text to check
+ * @returns {boolean}
+ */
 export function containsXssPattern(text) {
   if (!text) return false;
 
@@ -316,6 +337,14 @@ export function isValidTopicText(text) {
 
   // Trim for length check
   const trimmed = text.trim();
+
+    // Check if the input is a URL
+  if (isUrl(trimmed)) {
+    return {
+      isValid: false,
+      error: 'URLs are not allowed as a topic. Please enter a topic phrase.'
+    };
+  }
 
   // Check length
   if (trimmed.length < 3) {
@@ -432,6 +461,7 @@ export default {
   sanitizeUrl,
   
   // Text validators
+  isUrl,
   isValidTopicText,
   containsSqlInjectionPattern,
   containsXssPattern,
