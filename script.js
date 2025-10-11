@@ -256,6 +256,23 @@ async function generateContent() {
     }
 }
 
+// Fetch prompt template from backend
+async function fetchPromptTemplate(promptType) {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/prompt/${promptType}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch prompt template');
+        }
+        
+        return data.prompt;
+    } catch (error) {
+        console.error('Error fetching prompt template:', error);
+        throw error;
+    }
+}
+
 // Generate quiz using OpenRouter API
 async function generateQuiz() {
     const contentSource = document.getElementById('contentSource').value;
@@ -284,30 +301,15 @@ async function generateQuiz() {
     
     try {
         const languageText = language === 'english' ? 'English' : 'Indonesian';
-        const prompt = `Based on the following document content, generate ${numQuestions} multiple-choice questions in ${languageText}. 
-
-Document content:
-${documentContent}
-
-Please provide the questions in the following JSON format:
-{
-  "questions": [
-    {
-      "question": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
-      "correctAnswer": 0,
-      "explanation": "Detailed explanation of why this is the correct answer"
-    }
-  ]
-}
-
-Important requirements:
-- Each question must have exactly 4 options
-- The correctAnswer should be the index (0-3) of the correct option
-- Provide a detailed explanation for each correct answer
-- Make questions challenging but fair
-- Questions should be in ${languageText}
-- Return ONLY valid JSON, no additional text`;
+        
+        // Fetch prompt template from backend
+        let promptTemplate = await fetchPromptTemplate('generate_quiz');
+        
+        // Replace placeholders in the template
+        const prompt = promptTemplate
+            .replace(/\{\{numQuestions\}\}/g, numQuestions)
+            .replace(/\{\{language\}\}/g, languageText)
+            .replace(/\{\{documentContent\}\}/g, documentContent);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -534,31 +536,15 @@ async function generateFlashcards() {
     
     try {
         const languageText = language === 'english' ? 'English' : 'Indonesian';
-        const prompt = `Based on the following document content, generate ${numCards} flash cards in ${languageText}. 
-
-Document content:
-${documentContent}
-
-Please provide the flash cards in the following JSON format:
-{
-  "cards": [
-    {
-      "front": "Key concept or question",
-      "back": "Concise answer or explanation"
-    }
-  ]
-}
-
-Important requirements:
-- Create ${numCards} flash cards
-- Each card should have a front (question/concept) and back (answer/explanation)
-- Front should be concise and clear (max 15 words)
-- Back should be VERY CONCISE - MAXIMUM 30 WORDS ONLY
-- Keep the back answer brief, focused, and to the point
-- Avoid lengthy explanations - summarize key points only
-- Cards should be in ${languageText}
-- Cover the most important concepts from the document
-- Return ONLY valid JSON, no additional text`;
+        
+        // Fetch prompt template from backend
+        let promptTemplate = await fetchPromptTemplate('generate_flashcard');
+        
+        // Replace placeholders in the template
+        const prompt = promptTemplate
+            .replace(/\{\{numCards\}\}/g, numCards)
+            .replace(/\{\{language\}\}/g, languageText)
+            .replace(/\{\{documentContent\}\}/g, documentContent);
 
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',

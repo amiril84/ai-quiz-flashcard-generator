@@ -271,6 +271,48 @@ def scrape_website():
             'error': str(e)
         }), 500
 
+@app.route('/api/prompt/<prompt_type>', methods=['GET'])
+def get_prompt(prompt_type):
+    """
+    Get prompt template from markdown file
+    """
+    try:
+        # Validate prompt type to prevent directory traversal
+        allowed_prompts = ['generate_quiz', 'generate_flashcard', 'enhance_prompt']
+        
+        if prompt_type not in allowed_prompts:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid prompt type. Allowed: {", ".join(allowed_prompts)}'
+            }), 400
+        
+        # Construct file path
+        prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
+        file_path = os.path.join(prompts_dir, f'{prompt_type}.md')
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return jsonify({
+                'success': False,
+                'error': f'Prompt template not found: {prompt_type}'
+            }), 404
+        
+        # Read the prompt file
+        with open(file_path, 'r', encoding='utf-8') as f:
+            prompt_content = f.read()
+        
+        return jsonify({
+            'success': True,
+            'prompt': prompt_content,
+            'prompt_type': prompt_type
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error reading prompt template: {str(e)}'
+        }), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """
