@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  isValidYouTubeVideoUrl,
+  isValidWebsiteUrl,
+  isValidTopicText,
+  isYouTubeUrl,
+  sanitizeUrl,
+  sanitizeText
+} from '@/lib/validators'
 
 export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGenerated }) {
   const [apiKey, setApiKey] = useState('')
@@ -22,10 +30,68 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
   const [isFetchingYoutube, setIsFetchingYoutube] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [configError, setConfigError] = useState(false)
+  
+  // Validation error states
+  const [errors, setErrors] = useState({
+    youtube: '',
+    website: '',
+    topic: ''
+  })
+  
+  const [warnings, setWarnings] = useState({
+    youtube: '',
+    website: '',
+    topic: ''
+  })
 
   useEffect(() => {
     fetchConfig()
   }, [])
+  
+  // Validation functions
+  const validateYouTubeUrl = (url) => {
+    const validation = isValidYouTubeVideoUrl(url)
+    if (!validation.isValid) {
+      setErrors(prev => ({ ...prev, youtube: `❌ ${validation.error}` }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, youtube: '' }))
+    setWarnings(prev => ({ ...prev, youtube: '' }))
+    return true
+  }
+  
+  const validateWebsiteUrl = (url) => {
+    // Check if it's a YouTube URL first (warning, not error)
+    if (url.trim() && isYouTubeUrl(url)) {
+      setWarnings(prev => ({ 
+        ...prev, 
+        website: '⚠️ This is a YouTube URL. Please select "YouTube" as your content source instead' 
+      }))
+      setErrors(prev => ({ ...prev, website: '' }))
+      return false
+    }
+    
+    const validation = isValidWebsiteUrl(url)
+    if (!validation.isValid) {
+      setErrors(prev => ({ ...prev, website: `❌ ${validation.error}` }))
+      setWarnings(prev => ({ ...prev, website: '' }))
+      return false
+    }
+    
+    setErrors(prev => ({ ...prev, website: '' }))
+    setWarnings(prev => ({ ...prev, website: '' }))
+    return true
+  }
+  
+  const validateTopicText = (text) => {
+    const validation = isValidTopicText(text)
+    if (!validation.isValid) {
+      setErrors(prev => ({ ...prev, topic: `❌ ${validation.error}` }))
+      return false
+    }
+    setErrors(prev => ({ ...prev, topic: '' }))
+    return true
+  }
 
   const fetchConfig = async () => {
     try {
@@ -63,8 +129,8 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
   }
 
   const fetchYouTubeTranscript = async () => {
-    if (!youtubeUrl.trim()) {
-      alert('Please enter a YouTube video URL')
+    // Validate URL before fetching
+    if (!validateYouTubeUrl(youtubeUrl)) {
       return null
     }
 
@@ -73,6 +139,9 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
       setYoutubeInfo('⏳ Fetching YouTube transcript...')
 
       const languageCode = language === 'english' ? 'en' : 'id'
+      
+      // Sanitize URL before sending to backend
+      const sanitizedUrl = sanitizeUrl(youtubeUrl)
 
       const response = await fetch(`${backendUrl}/api/transcript`, {
         method: 'POST',
@@ -80,7 +149,7 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          video_url: youtubeUrl,
+          video_url: sanitizedUrl,
           languages: [languageCode, 'en']
         })
       })
@@ -107,14 +176,17 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
   }
 
   const fetchWebsiteContent = async () => {
-    if (!websiteUrl.trim()) {
-      alert('Please enter a website URL')
+    // Validate URL before fetching
+    if (!validateWebsiteUrl(websiteUrl)) {
       return null
     }
 
     try {
       setIsScrapingWebsite(true)
       setWebsiteInfo('⏳ Scraping website content...')
+      
+      // Sanitize URL before sending to backend
+      const sanitizedUrl = sanitizeUrl(websiteUrl)
 
       const response = await fetch(`${backendUrl}/api/scrape-website`, {
         method: 'POST',
@@ -122,7 +194,7 @@ export default function SetupForm({ backendUrl, onQuizGenerated, onFlashcardsGen
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          website_url: websiteUrl
+          website_url: sanitizedUrl
         })
       })
 
@@ -342,13 +414,13 @@ Important requirements:
   }
 
   const generateQuizFromTopic = async () => {
-    if (!topicText.trim()) {
-      alert('Please enter a topic')
+    // Validate topic text
+    if (!validateTopicText(topicText)) {
       return
     }
 
     if (numQuestions < 1 || numQuestions > 20) {
-      alert('Please enter a number between 1 and 20')
+      setErrors(prev => ({ ...prev, topic: '❌ Please enter a number between 1 and 20' }))
       return
     }
 
@@ -356,6 +428,9 @@ Important requirements:
 
     try {
       const languageText = language === 'english' ? 'English' : 'Indonesian'
+      
+      // Sanitize topic text before using
+      const sanitizedTopic = sanitizeText(topicText)
       
       // Fetch the prompt template from backend
       const promptResponse = await fetch(`${backendUrl}/api/prompt/generate_quiz_from_topic`)
@@ -367,7 +442,7 @@ Important requirements:
       
       // Replace placeholders in the template
       let prompt = promptData.prompt
-        .replace(/\{\{topic\}\}/g, topicText)
+        .replace(/\{\{topic\}\}/g, sanitizedTopic)
         .replace(/\{\{numQuestions\}\}/g, numQuestions.toString())
         .replace(/\{\{language\}\}/g, languageText)
 
@@ -416,13 +491,13 @@ Important requirements:
   }
 
   const generateFlashcardsFromTopic = async () => {
-    if (!topicText.trim()) {
-      alert('Please enter a topic')
+    // Validate topic text
+    if (!validateTopicText(topicText)) {
       return
     }
 
     if (numCards < 1 || numCards > 30) {
-      alert('Please enter a number between 1 and 30')
+      setErrors(prev => ({ ...prev, topic: '❌ Please enter a number between 1 and 30' }))
       return
     }
 
@@ -430,6 +505,9 @@ Important requirements:
 
     try {
       const languageText = language === 'english' ? 'English' : 'Indonesian'
+      
+      // Sanitize topic text before using
+      const sanitizedTopic = sanitizeText(topicText)
       
       // Fetch the prompt template from backend
       const promptResponse = await fetch(`${backendUrl}/api/prompt/generate_flashcard_from_topic`)
@@ -441,7 +519,7 @@ Important requirements:
       
       // Replace placeholders in the template
       let prompt = promptData.prompt
-        .replace(/\{\{topic\}\}/g, topicText)
+        .replace(/\{\{topic\}\}/g, sanitizedTopic)
         .replace(/\{\{numCards\}\}/g, numCards.toString())
         .replace(/\{\{language\}\}/g, languageText)
 
@@ -497,6 +575,25 @@ Important requirements:
     setYoutubeInfo('')
     setWebsiteUrl('')
     setWebsiteInfo('')
+    // Clear errors when switching content source
+    setErrors({ youtube: '', website: '', topic: '' })
+    setWarnings({ youtube: '', website: '', topic: '' })
+  }
+  
+  // Error Message Component
+  const ErrorMessage = ({ message, type = 'error' }) => {
+    if (!message) return null
+    
+    const isError = type === 'error'
+    const bgColor = isError ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20'
+    const textColor = isError ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400'
+    const borderColor = isError ? 'border-red-200 dark:border-red-800' : 'border-amber-200 dark:border-amber-800'
+    
+    return (
+      <div className={`mt-2 p-3 rounded-md border ${bgColor} ${borderColor} ${textColor} text-sm`}>
+        {message}
+      </div>
+    )
   }
 
   return (
@@ -570,8 +667,16 @@ Important requirements:
               type="url"
               placeholder="https://www.youtube.com/watch?v=..."
               value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
+              onChange={(e) => {
+                setYoutubeUrl(e.target.value)
+                setErrors(prev => ({ ...prev, youtube: '' }))
+                setWarnings(prev => ({ ...prev, youtube: '' }))
+              }}
+              onBlur={() => youtubeUrl.trim() && validateYouTubeUrl(youtubeUrl)}
+              className={errors.youtube ? 'border-red-500 focus:ring-red-500' : ''}
             />
+            <ErrorMessage message={errors.youtube} type="error" />
+            <ErrorMessage message={warnings.youtube} type="warning" />
             {youtubeInfo && (
               <p className={`text-sm ${youtubeInfo.startsWith('✅') ? 'text-green-600 dark:text-green-400' : youtubeInfo.startsWith('❌') ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                 {youtubeInfo}
@@ -588,8 +693,16 @@ Important requirements:
               type="url"
               placeholder="https://id.wikipedia.org/wiki/..."
               value={websiteUrl}
-              onChange={(e) => setWebsiteUrl(e.target.value)}
+              onChange={(e) => {
+                setWebsiteUrl(e.target.value)
+                setErrors(prev => ({ ...prev, website: '' }))
+                setWarnings(prev => ({ ...prev, website: '' }))
+              }}
+              onBlur={() => websiteUrl.trim() && validateWebsiteUrl(websiteUrl)}
+              className={errors.website || warnings.website ? 'border-red-500 focus:ring-red-500' : ''}
             />
+            <ErrorMessage message={errors.website} type="error" />
+            <ErrorMessage message={warnings.website} type="warning" />
             {websiteInfo && (
               <p className={`text-sm ${websiteInfo.startsWith('✅') ? 'text-green-600 dark:text-green-400' : websiteInfo.startsWith('❌') ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
                 {websiteInfo}
@@ -607,8 +720,14 @@ Important requirements:
                 type="text"
                 placeholder="e.g., English Grammar Past Tense"
                 value={topicText}
-                onChange={(e) => setTopicText(e.target.value)}
+                onChange={(e) => {
+                  setTopicText(e.target.value)
+                  setErrors(prev => ({ ...prev, topic: '' }))
+                }}
+                onBlur={() => topicText.trim() && validateTopicText(topicText)}
+                className={errors.topic ? 'border-red-500 focus:ring-red-500' : ''}
               />
+              <ErrorMessage message={errors.topic} type="error" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Sample Topics (click to use)</label>
