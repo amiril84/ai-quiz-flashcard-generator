@@ -5,13 +5,12 @@ A visually appealing web application that generates interactive quizzes and flas
 ## ✨ Features
 
 1.  **Multiple Content Sources**:
-    -   **From a Topic**: Type any topic (e.g., "English Grammar") and let the AI generate content from its knowledge base
-    -   **Document Upload**: Upload text documents (.txt)
-    -   **YouTube Video**: Provide a YouTube video URL to generate content from its transcript
-    -   **Website Content**: Scrape any website URL using Firecrawl
+    -   **From a Topic**: Type any topic and let the AI generate quiz or flashcards  
+    -   **Document Upload**: Upload your document to generate quiz or flashcards
+    -   **YouTube Video**: Provide a YouTube video URL to generate quiz or flashcards
+    -   **Website Content**: Provide a website URL like Wikipedia  to generate quiz or flashcards
 2.  **Adaptive AI Prompts**:
     -   When generating from a topic, the AI intelligently detects user-specified difficulty and audience (e.g., "for beginners", "for college students")
-    -   Prompts are optimized to avoid filler phrases like "according to the document", resulting in clean, professional output
 3.  **Dual Content Mode**: Choose between an Interactive Quiz or Flash Cards
 4.  **Customizable Quiz**: Choose the number of multiple-choice questions (1-20)
 4.  **Customizable Flashcards**: Choose the number of flash cards (1-30)
@@ -43,7 +42,8 @@ A visually appealing web application that generates interactive quizzes and flas
 - The API key should have access to the model you intend to use.
 - **Node.js** v18+ and **npm** for the frontend.
 - **Python** 3.7+ for the backend.
-- **For Website Scraping**: Firecrawl API key ([Get free key here](https://firecrawl.dev))
+- **For Website URL**: Use FireCreawl API
+- **For Youtube URL**: Use Youtube Transcript API from RapidAPI
 
 ### Local Development Setup
 
@@ -56,13 +56,12 @@ The backend is a Python Flask server that handles YouTube and website content pr
 **On Windows:**
 1.  Open Command Prompt or PowerShell.
 2.  Navigate to the `backend` folder: `cd backend`
-3.  Run the startup script: `start_backend.bat`
+3.  Run: `python app.py`
 
 **On Mac/Linux:**
 1.  Open your terminal.
 2.  Navigate to the `backend` folder: `cd backend`
-3.  Make the script executable (first time only): `chmod +x start_backend.sh`
-4.  Run the startup script: `./start_backend.sh`
+3.  Run : `python app.py`
 
 The backend server will start on `http://localhost:5000`. Keep this terminal open.
 
@@ -96,6 +95,7 @@ The frontend is a React application built with Vite.
     -   Enter your OpenRouter API key.
     -   Enter the AI model name (e.g., `google/gemini-pro-1.5`).
     -   Enter your Firecrawl API key (for website scraping).
+    -   Enter your RapidAPI's Youtube API key (to retrieve youtube transcript)
     -   Click "Save Configuration".
 3.  **Select Content Source** (Topic, Document, YouTube, or Website URL).
 4.  **Configure and Generate** your Quiz or Flashcards.
@@ -109,7 +109,7 @@ The frontend is a React application built with Vite.
 - **AI Model**: Gemini series via OpenRouter API
 - **APIs**:
   - OpenRouter API for AI completions
-  - YouTube Transcript API for video transcripts
+  - YouTube Transcript API from RapidAPI for video transcripts
   - Firecrawl API for website scraping
 
 ### File Structure
@@ -152,8 +152,6 @@ ai-quiz-flashcard-generator/
 
 For specific issues and their solutions, see:
 - [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) - Complete deployment guide for Render
-- [YOUTUBE_API_FIX.md](YOUTUBE_API_FIX.md) - YouTube Transcript API fix documentation
-- [YOUTUBE_PROXY_FIX.md](YOUTUBE_PROXY_FIX.md) - YouTube proxy configuration guide
 
 ## 📄 License
 
